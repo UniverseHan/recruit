@@ -8,34 +8,39 @@ using System.Text;
 public class SceneController : MonoBehaviour
 {
     // Start is called before the first frame update
-    GameObject itsObject;
-
     private Texture2D texture;
     
     List<GameObject> sceneObjects = new List<GameObject>();
     void Start()
     {
-        Debug.Log("Hello console");
-        Debug.Log(Application.dataPath);
+        texture = loadApartmentTexture();
+        ZigbangResponse response = fetchApartmentsData();
+        createApartments(response.data);
+    }
+
+    private ZigbangResponse fetchApartmentsData()
+    {
         FileStream fileStream = new FileStream(string.Format("{0}/{1}", Application.dataPath + "/Samples/json", "dong.json"), FileMode.Open);
         byte[] data = new byte[fileStream.Length];
         fileStream.Read(data, 0, data.Length);
         fileStream.Close();
         string jsonData = System.Text.Encoding.UTF8.GetString(data);
 
-        Debug.Log(jsonData);
-        ZigbangResponse response = JsonUtility.FromJson<ZigbangResponse>(jsonData);
-        response.Print();
-        
+        return JsonUtility.FromJson<ZigbangResponse>(jsonData);
+    }
+
+    private Texture2D loadApartmentTexture()
+    {
         byte[] textureBuffer = System.IO.File.ReadAllBytes(string.Format("{0}/{1}", Application.dataPath + "/Samples/texture", "buildingTester_d.png"));
-        if (textureBuffer.Length > 0) {
-            texture = new Texture2D(0, 0); 
-            texture.LoadImage(textureBuffer); 
-            Debug.Log("Texture");
+        if (textureBuffer.Length <= 0)
+        {
+            Debug.Log("Texture loading failed.");
+            return null;
         }
 
-        createApartments(response.data);
-        itsObject = new GameObject("test object");
+        texture = new Texture2D(0, 0); 
+        texture.LoadImage(textureBuffer); 
+        return texture;
     }
 
     private void createApartments(List<DongModel> apartments) 
@@ -71,7 +76,6 @@ public class SceneController : MonoBehaviour
             Material material = new Material(Shader.Find("Unlit/Texture"));
             material.mainTexture = texture as Texture;
             material.SetTextureScale("_MainTex", new Vector2(1.0f,(float)Math.Floor(height/3)));
-            // material.SetTexture("mainTexture", texture);
             obj.AddComponent<MeshRenderer>();
             obj.GetComponent<MeshRenderer>().material = material;
 
@@ -112,14 +116,27 @@ public class SceneController : MonoBehaviour
 
         Mesh mesh = new Mesh();
         mesh.vertices = vertices;
+        mesh.triangles = generateIndices(vertices);
+        mesh.uv = generateUVs(vertices);
+        return mesh;
+    }
+
+    /**
+     * @brief 
+     * @desc 정점들은 폴리곤 단위로 구성되어 있다. 그렇기 때문에 중복된 정점들도 존재한다. 인덱스는 1:1로 매칭된다.
+     **/
+    private int[] generateIndices(Vector3[] vertices)
+    {
         List<int> indices = new List<int>();
         for(int i = 0; i < vertices.Length; ++i)
         {
             indices.Add(i);
         }
-        Debug.Log(string.Join(", ", indices));
-        mesh.triangles = indices.ToArray();
+        return indices.ToArray();
+    }
 
+    private Vector2[] generateUVs(Vector3[] vertices)
+    {
         List<Vector2> uvs = new List<Vector2>();
         for(int i = 0; i < vertices.Length; i += 6) {
             Vector3 normal = getNormal(vertices[i + 0], vertices[i + 1], vertices[i + 2]);
@@ -134,8 +151,7 @@ public class SceneController : MonoBehaviour
             uvs.Add(new Vector2(leftSide, 1.0f));
             uvs.Add(new Vector2(leftSide, 0.5f));
         }
-        mesh.uv = uvs.ToArray();
-        return mesh;
+        return uvs.ToArray();
     }
 
     private Vector3 getNormal(Vector3 a,Vector3 b,Vector3 c )
