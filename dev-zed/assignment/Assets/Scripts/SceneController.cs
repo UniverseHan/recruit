@@ -26,8 +26,6 @@ public class SceneController : MonoBehaviour
         Debug.Log(jsonData);
         ZigbangResponse response = JsonUtility.FromJson<ZigbangResponse>(jsonData);
         response.Print();
-
-
         
         byte[] textureBuffer = System.IO.File.ReadAllBytes(string.Format("{0}/{1}", Application.dataPath + "/Samples/texture", "buildingTester_d.png"));
         if (textureBuffer.Length > 0) {
@@ -35,7 +33,6 @@ public class SceneController : MonoBehaviour
             texture.LoadImage(textureBuffer); 
             Debug.Log("Texture");
         }
-        
 
         createApartments(response.data);
         itsObject = new GameObject("test object");
@@ -49,13 +46,19 @@ public class SceneController : MonoBehaviour
 
             // surfaces
             List<Vector3> vertexList = new List<Vector3>();
+            float minY = float.MaxValue;
+            float maxY = float.MinValue;
             foreach(string encodedVertices in modelData.coordinatesBase64s)
             {
                 Vector3[] partials = paseVertexies(encodedVertices);
                 foreach(Vector3 v in partials) {
                     vertexList.Add(v);
+                    minY = Math.Min(minY, v.y);
+                    maxY = Math.Max(maxY, v.y);
                 }
             }
+
+            float height = Math.Abs(maxY - minY);
             
             Vector3[] vertexArray = vertexList.ToArray();
             Mesh mesh = createMesh(vertexArray);
@@ -67,7 +70,7 @@ public class SceneController : MonoBehaviour
             obj.GetComponent<MeshFilter>().mesh = mesh;
             Material material = new Material(Shader.Find("Unlit/Texture"));
             material.mainTexture = texture as Texture;
-            material.SetTextureScale("_MainTex", new Vector2(1.0f,3));
+            material.SetTextureScale("_MainTex", new Vector2(1.0f,(float)Math.Floor(height/3)));
             // material.SetTexture("mainTexture", texture);
             obj.AddComponent<MeshRenderer>();
             obj.GetComponent<MeshRenderer>().material = material;
@@ -163,7 +166,7 @@ public class SceneController : MonoBehaviour
         {
             return new Vector2(0.0f, 12.0f/24.0f);
         } 
-        else 
+        else // case 2
         {
             return new Vector2(12.0f/24.0f, 18.0f/24.0f);
         }
