@@ -133,12 +133,12 @@ public class SceneController : MonoBehaviour
             vertices.Add(vertex);
         }
 
-        string vString = vertices.Count + " vertices\n";
-        foreach(Vector3 v in vertices)
-        {
-            vString += v.ToString("F4") + "\n";
-        }
-        Debug.Log(vString);
+        // string vString = vertices.Count + " vertices\n";
+        // foreach(Vector3 v in vertices)
+        // {
+        //     vString += v.ToString("F4") + "\n";
+        // }
+        // Debug.Log(vString);
         
         return vertices.ToArray();
     }
