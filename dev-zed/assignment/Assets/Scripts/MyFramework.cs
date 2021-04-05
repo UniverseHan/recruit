@@ -5,7 +5,7 @@ using System;
 using UnityEngine;
 using System.Text;
 
-public class SceneController : MonoBehaviour
+public class MyFramework : MonoBehaviour
 {
     // Start is called before the first frame update
     private Texture2D texture;
