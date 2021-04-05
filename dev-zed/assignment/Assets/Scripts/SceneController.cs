@@ -119,18 +119,17 @@ public class SceneController : MonoBehaviour
 
         List<Vector2> uvs = new List<Vector2>();
         for(int i = 0; i < vertices.Length; i += 6) {
-            
             Vector3 normal = getNormal(vertices[i + 0], vertices[i + 1], vertices[i + 2]);
-            float leftSide = 0.0f;
-            float rightSide = 12.0f / 24.0f;
-            uvs.Add(new Vector2(leftSide, 0.0f));
-            uvs.Add(new Vector2(rightSide, 0.0f));
+            Vector3 range = getUVByDirection(normal);
+            float leftSide = range.x;
+            float rightSide = range.y;
+            uvs.Add(new Vector2(leftSide, 0.5f));
+            uvs.Add(new Vector2(rightSide, 0.5f));
             uvs.Add(new Vector2(rightSide, 1.0f));
             
             uvs.Add(new Vector2(rightSide, 1.0f));
             uvs.Add(new Vector2(leftSide, 1.0f));
-            uvs.Add(new Vector2(leftSide, 0.0f));
-            
+            uvs.Add(new Vector2(leftSide, 0.5f));
         }
         mesh.uv = uvs.ToArray();
         return mesh;
@@ -143,6 +142,31 @@ public class SceneController : MonoBehaviour
         Vector3 perp = Vector3.Cross(side1, side2);
         perp /= perp.magnitude;
         return perp;
+    }
+
+    private Vector2 getUVByDirection(Vector3 normal) 
+    {
+        Vector3 projectedOnXZ = new Vector3(normal.x, 0.0f, normal.z);
+        float aDotB = Vector3.Dot(projectedOnXZ, Vector3.forward);
+        float theta = (float)Math.Acos(aDotB / (projectedOnXZ.magnitude * Vector3.forward.magnitude));
+        float degree = (float)(theta * (180.0f / Math.PI));
+
+        Debug.Log("degree is " + degree + ", nor * forwad = " + aDotB);
+
+        // case 3
+        if (Math.Abs(Math.Abs(Vector3.Dot(normal, Vector3.up)) - 1) < 0.001f) 
+        {
+            return new Vector2(18.0f/24.0f, 1.0f);
+        } 
+        // case 1
+        else if (aDotB <= 0 && degree >= 140.0f) 
+        {
+            return new Vector2(0.0f, 12.0f/24.0f);
+        } 
+        else 
+        {
+            return new Vector2(12.0f/24.0f, 18.0f/24.0f);
+        }
     }
 
     // Update is called once per frame
