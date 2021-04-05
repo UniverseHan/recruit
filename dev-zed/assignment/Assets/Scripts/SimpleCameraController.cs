@@ -10,6 +10,7 @@ namespace UnityTemplateProjects
 {
     public class SimpleCameraController : MonoBehaviour
     {
+        
         class CameraState
         {
             public float yaw;
@@ -176,6 +177,16 @@ namespace UnityTemplateProjects
             m_InterpolatingCameraState.LerpTowards(m_TargetCameraState, positionLerpPct, rotationLerpPct);
 
             m_InterpolatingCameraState.UpdateTransform(transform);
+        }
+
+         void OnPreRender()
+        {
+            GL.wireframe = true;
+        }
+
+        void OnPostRender()
+        {
+            GL.wireframe = false;
         }
     }
 
