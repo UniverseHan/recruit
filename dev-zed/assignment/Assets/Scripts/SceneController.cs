@@ -18,6 +18,9 @@ public class SceneController : MonoBehaviour
         createApartments(response.data);
     }
 
+    /**
+     * @desc 아파트 모델을 로드한다. 나중에 서버요청으로 변경될 수 있다. 사실 비동기 처리도 고려해야 한다.
+     **/
     private ZigbangResponse fetchApartmentsData()
     {
         FileStream fileStream = new FileStream(string.Format("{0}/{1}", Application.dataPath + "/Samples/json", "dong.json"), FileMode.Open);
@@ -25,10 +28,12 @@ public class SceneController : MonoBehaviour
         fileStream.Read(data, 0, data.Length);
         fileStream.Close();
         string jsonData = System.Text.Encoding.UTF8.GetString(data);
-
         return JsonUtility.FromJson<ZigbangResponse>(jsonData);
     }
 
+    /**
+     * @desc 아마트의 외벽 텍스쳐를 불러온다. 나중에 서버 요청으로 변경될 수 있다. 비동기 처리를 고려해야함.
+     **/
     private Texture2D loadApartmentTexture()
     {
         byte[] textureBuffer = System.IO.File.ReadAllBytes(string.Format("{0}/{1}", Application.dataPath + "/Samples/texture", "buildingTester_d.png"));
@@ -42,45 +47,73 @@ public class SceneController : MonoBehaviour
         texture.LoadImage(textureBuffer); 
         return texture;
     }
-
+    
+    /**
+     * @desc 아파트 데이터 모델을 가지고 실제 아파트 씬 오브젝트들을 만든다.
+     */
     private void createApartments(List<DongModel> apartments) 
     {
         foreach (DongModel dong in apartments)
         {
             RoomType modelData = dong.roomtypes[0];
-
-            // surfaces
-            List<Vector3> vertexList = new List<Vector3>();
-            float minY = float.MaxValue;
-            float maxY = float.MinValue;
-            foreach(string encodedVertices in modelData.coordinatesBase64s)
-            {
-                Vector3[] partials = paseVertexies(encodedVertices);
-                foreach(Vector3 v in partials) {
-                    vertexList.Add(v);
-                    minY = Math.Min(minY, v.y);
-                    maxY = Math.Max(maxY, v.y);
-                }
-            }
-
-            float height = Math.Abs(maxY - minY);
-            
-            Vector3[] vertexArray = vertexList.ToArray();
+            Vector3[] vertexArray = decodeVertices(modelData.coordinatesBase64s);
             Mesh mesh = createMesh(vertexArray);
-            mesh.RecalculateBounds();
-            mesh.RecalculateNormals();
-
-            GameObject obj = new GameObject("Apart" + sceneObjects.Count);
-            obj.AddComponent<MeshFilter>();
-            obj.GetComponent<MeshFilter>().mesh = mesh;
-            Material material = new Material(Shader.Find("Unlit/Texture"));
-            material.mainTexture = texture as Texture;
-            material.SetTextureScale("_MainTex", new Vector2(1.0f,(float)Math.Floor(height/3)));
-            obj.AddComponent<MeshRenderer>();
-            obj.GetComponent<MeshRenderer>().material = material;
-
+            float height = calculateHeightOfApartment(vertexArray);
+            GameObject obj = createApartmentObject("Apart" + sceneObjects.Count, mesh, height, texture);
             sceneObjects.Add(obj);
         }
+    }
+
+    /**
+     * @desc base64로 인코딩된 정점 데이터들을 디코딩 한다. float[] 의 형태로 3개씩 하나의 정점을 이룬다고 가정한다.
+     */
+    private Vector3[] decodeVertices(List<string> encodedBase64Vertices)
+    {
+        List<Vector3> vertexList = new List<Vector3>();
+        foreach(string encodedVertices in encodedBase64Vertices)
+        {
+            Vector3[] partials = paseVertexies(encodedVertices);
+            foreach(Vector3 v in partials) {
+                vertexList.Add(v);
+            }
+        }
+        return vertexList.ToArray();
+    }
+
+    /**
+     * @desc 아파트의 높이를 계산한다. 모든 정점을 순회하면서 계신을 하기 떄문에 O(n)의 시간이 걸린다.
+     */
+    private float calculateHeightOfApartment(Vector3[] vertices)
+    {
+        float minY = float.MaxValue;
+        float maxY = float.MinValue;
+        foreach(Vector3 v in vertices)
+        {
+            minY = Math.Min(minY, v.y);
+            maxY = Math.Max(maxY, v.y);
+        }
+        return Math.Abs(maxY - minY);
+    }
+
+    /**
+     * @desc 3D모델 데이터들을 가지고 아파트의 씬 오브젝트를 생성한다.
+     */
+    private GameObject createApartmentObject(string name, Mesh mesh, float height, Texture2D texture)
+    {
+        const float METER_OF_ONE_FLOOW = 3.0f;
+        GameObject obj = new GameObject(name);
+
+        obj.AddComponent<MeshFilter>();
+        obj.GetComponent<MeshFilter>().mesh = mesh;
+        
+        Material material = new Material(Shader.Find("Unlit/Texture"));
+        material.mainTexture = texture as Texture;
+        material.SetTextureScale("_MainTex", new Vector2(1.0f,(float)Math.Floor(height/METER_OF_ONE_FLOOW)));
+        
+        obj.AddComponent<MeshRenderer>();
+        obj.GetComponent<MeshRenderer>().material = material;
+        
+        return obj;
     }
 
     private Vector3[] paseVertexies(string encodedString)
@@ -118,6 +151,8 @@ public class SceneController : MonoBehaviour
         mesh.vertices = vertices;
         mesh.triangles = generateIndices(vertices);
         mesh.uv = generateUVs(vertices);
+        mesh.RecalculateBounds();
+        mesh.RecalculateNormals();
         return mesh;
     }
 
